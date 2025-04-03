@@ -7,6 +7,7 @@ export default defineConfig({
   clean: true,
   target: 'node14',
   format: ['esm'],
-  minify: true,
+  minify: false,
   treeshake: true,
+  dts: true,
 })

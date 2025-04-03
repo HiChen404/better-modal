@@ -1,28 +1,18 @@
 {
-  "name": "better-modal",
+  "name": "better-modal-workspace",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "tsup --watch"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "1.9.4",
-    "@types/node": "16.11.68",
-    "@types/react": "18",
-    "@types/react-dom": "18",
-    "tsup": "8.4.0",
-    "typescript": "5.8.2",
-    "react": "18",
-    "react-dom": "18"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.7.1",
-  "peerDependencies": {
-    "react": ">16.8.0",
-    "react-dom": ">16.8.0"
+  "packageManager": "pnpm@10.7.0",
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4"
+  },
+  "dependencies": {
+    "antd": "^5.24.6"
   }
 }
