@@ -1,19 +1,33 @@
-export const MODAL_REGISTRY: {
-  [id: string]: {
-    comp: React.FC<any>
-    props?: Record<string, unknown>
-  }
-} = {}
-export const ALREADY_MOUNTED = {}
+export const MODAL_REGISTRY: Record<
+  string,
+  Record<
+    string,
+    {
+      comp: React.FC<any>
+      visible?: boolean
+      props?: Record<string, unknown>
+    }
+  >
+> = {}
 export type NiceModalArgs<T> = T extends keyof JSX.IntrinsicElements | React.JSXElementConstructor<any>
   ? React.ComponentProps<T>
   : Record<string, unknown>
 
-// All registered modals will be rendered in modal placeholder
-export const register = <T extends React.FC<any>>(id: string, comp: T, props?: Partial<NiceModalArgs<T>>): void => {
-  if (!MODAL_REGISTRY[id]) {
-    MODAL_REGISTRY[id] = { comp, props }
-  } else {
-    MODAL_REGISTRY[id].props = props
+export const register = <T extends React.FC<any>>({
+  providerId,
+  modalId,
+  comp,
+}: {
+  providerId: string | number
+  modalId: string
+  comp: T
+  props?: Partial<NiceModalArgs<T>>
+}): void => {
+  if (!MODAL_REGISTRY[providerId]) {
+    MODAL_REGISTRY[providerId] = {}
+  }
+  MODAL_REGISTRY[providerId][modalId] = {
+    comp,
+    visible: true,
   }
 }

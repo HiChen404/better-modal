@@ -1,13 +1,16 @@
 import { useContext, useEffect } from 'react'
-import { NiceModalContext, NiceModalIdContext } from '../context'
+import { NiceModalContext, NiceModalDispatchContext, NiceModalIdContext, NiceModalProviderIdContext } from '../context'
 import { getModalId } from '../utils'
 import { MODAL_REGISTRY, register } from '../register'
 import { show } from '../show'
 
-export function useModal(modal?: any, args?: any): any {
+export function useModal(modal?: any, args?: any) {
   const modals = useContext(NiceModalContext)
-  console.log('🚀 -> useModal -> modals:', modals)
+  const providerId = useContext(NiceModalProviderIdContext)
   const contextModalId = useContext(NiceModalIdContext)
+  const dispatch = useContext(NiceModalDispatchContext)
+
+  if (!dispatch) throw new Error('No dispatch found in NiceModal.useModal.')
 
   let modalId: string | null = null
   const isUseComponent = modal && typeof modal !== 'string'
@@ -18,21 +21,27 @@ export function useModal(modal?: any, args?: any): any {
     modalId = getModalId(modal)
   }
 
-  // Only if contextModalId doesn't exist
   if (!modalId) throw new Error('No modal id found in NiceModal.useModal.')
 
   const mid = modalId as string
 
-  // If use a component directly, register it.
   useEffect(() => {
     if (isUseComponent && !MODAL_REGISTRY[mid]) {
-      register(mid, modal as React.FC, args)
+      register({ modalId: mid, providerId: providerId, comp: modal })
     }
-  }, [isUseComponent, mid, modal, args])
+  }, [isUseComponent, mid, modal, providerId])
 
-  const showCallback = (args?: Record<string, unknown>) => show(mid, args)
+  const showCallback = (args?: Record<string, unknown>) =>
+    show({
+      args: args,
+      providerId: providerId,
+      modal: modal,
+      dispatch: dispatch,
+    })
 
   return {
     show: showCallback,
+    visible: modals[mid]?.visible,
+    remove: () => dispatch({ type: 'nice-modal/remove', payload: { modalId: mid } }),
   }
 }

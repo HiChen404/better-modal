@@ -7,9 +7,8 @@ import './App.css'
 
 const Modal1 = NiceModal.create(() => {
   const modal = NiceModal.useModal()
-  console.log('🚀 -> Modal1 -> modal:', modal)
   return (
-    <Modal open={modal.open} title={'test'}>
+    <Modal open={modal.visible} title={'test'} onOk={modal.remove}>
       test
     </Modal>
   )
@@ -29,32 +28,47 @@ function App() {
 
 function Child() {
   const modal = NiceModal.useModal(Modal1)
+  const modal2 = NiceModal.useModal(Modal1)
 
   return (
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank" rel="noreferrer">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank" rel="noreferrer">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+      <div style={{ height: '700px', width: '400px', backgroundColor: 'lightblue', color: 'white' }}>
+        <h1>Child1</h1>
+        <button
+          type="button"
+          onClick={() => {
+            modal.show()
+          }}
+        >
+          click1
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            modal2.show()
+          }}
+        >
+          click2
+        </button>
+        <NiceModal.Provider>
+          <Child2 />
+        </NiceModal.Provider>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <button
-        type="button"
-        onClick={() => {
-          modal.show()
-        }}
-      >
-        click1
-      </button>
     </>
+  )
+}
+
+function Child2() {
+  const modal = NiceModal.useModal(Modal1)
+  return (
+    <div style={{ height: '100px', width: '400px', backgroundColor: 'gray', color: 'white' }}>
+      Child2
+      <div>
+        <button onClick={() => modal.show()} type="button">
+          click
+        </button>
+      </div>
+    </div>
   )
 }
 

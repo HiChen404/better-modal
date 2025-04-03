@@ -1,4 +1,5 @@
 import { initialState, NiceModalState, NiceModalStore } from './context'
+import { MODAL_REGISTRY } from './register'
 
 export interface NiceModalAction {
   type: 'nice-modal/show' | 'nice-modal/hide' | 'nice-modal/remove'
@@ -39,6 +40,10 @@ export const reducer = (state: NiceModalStore, action: NiceModalAction): NiceMod
       const { modalId } = action.payload
       const newState = { ...state }
       delete newState[modalId]
+      console.log('after remove', {
+        newState,
+        MODAL_REGISTRY,
+      })
       return newState
     }
     default:

@@ -2,7 +2,6 @@ import React, { FC, useContext, useEffect } from 'react'
 import NiceModal from '.'
 import { NiceModalContext, NiceModalIdContext } from './context'
 import { useModal } from './hooks/useModal'
-import { ALREADY_MOUNTED } from './register'
 
 export interface NiceModalHocProps {
   id: string
@@ -20,15 +19,7 @@ export const create = <P extends {}>(Comp: React.ComponentType<P>): React.FC<P &
       if (defaultVisible) {
         show()
       }
-
-      // @ts-ignore
-      ALREADY_MOUNTED[id] = true
-
-      return () => {
-        // @ts-ignore
-        delete ALREADY_MOUNTED[id]
-      }
-    }, [id, show, defaultVisible])
+    }, [show, defaultVisible])
     return (
       <NiceModalIdContext.Provider value={id}>
         <Comp {...(props as unknown as P)} />
