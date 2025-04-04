@@ -1,8 +1,8 @@
 import { useContext, useEffect } from 'react'
 import { NiceModalContext, NiceModalDispatchContext, NiceModalIdContext, NiceModalProviderIdContext } from '../context'
 import { getModalId } from '../utils'
-import { MODAL_REGISTRY, register } from '../register'
-import { show } from '../show'
+import { MODAL_REGISTRY, register, unregister } from '../register'
+import { show, remove } from '../actions'
 
 export function useModal(modal?: any, args?: any) {
   const modals = useContext(NiceModalContext)
@@ -26,7 +26,7 @@ export function useModal(modal?: any, args?: any) {
   const mid = modalId as string
 
   useEffect(() => {
-    if (isUseComponent && !MODAL_REGISTRY[mid]) {
+    if (isUseComponent && !MODAL_REGISTRY?.[providerId]?.[mid]) {
       register({ modalId: mid, providerId: providerId, comp: modal })
     }
   }, [isUseComponent, mid, modal, providerId])
@@ -35,13 +35,16 @@ export function useModal(modal?: any, args?: any) {
     show({
       args: args,
       providerId: providerId,
-      modal: modal,
+      modal: mid,
       dispatch: dispatch,
     })
+  const removeCallback = () => {
+    return remove({ modal: mid, dispatch: dispatch })
+  }
 
   return {
     show: showCallback,
-    visible: modals[mid]?.visible,
-    remove: () => dispatch({ type: 'nice-modal/remove', payload: { modalId: mid } }),
+    visible: MODAL_REGISTRY?.[providerId]?.[mid]?.visible,
+    remove: removeCallback,
   }
 }

@@ -1,8 +1,6 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import NiceModal from 'better-modal'
 import { Modal } from 'antd'
+import NiceModal from 'better-modal'
+import { useState } from 'react'
 import './App.css'
 
 const Modal1 = NiceModal.create(() => {

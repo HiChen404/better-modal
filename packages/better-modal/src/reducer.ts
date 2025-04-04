@@ -14,27 +14,36 @@ export const reducer = (state: NiceModalStore, action: NiceModalAction): NiceMod
   switch (action.type) {
     case 'nice-modal/show': {
       const { modalId, args } = action.payload
-      return {
-        ...state,
-        [modalId]: {
-          ...state[modalId],
-          id: modalId,
-          args,
-          visible: true,
-          delayVisible: true,
-        },
-      }
+      console.log('🚀 -> reducer -> modalId:', modalId)
+      // return {
+      //   ...state,
+      //   [modalId]: {
+      //     ...state[modalId],
+      //     id: modalId,
+      //     args,
+      //     visible: true,
+      //     delayVisible: true,
+      //   },
+      // }
+      return { ...state, [modalId]: modalId }
     }
     case 'nice-modal/hide': {
       const { modalId } = action.payload
       if (!state[modalId]) return state
-      return {
-        ...state,
-        [modalId]: {
-          ...state[modalId],
-          visible: false,
-        },
-      }
+      // return {
+      //   ...state,
+      //   [modalId]: {
+      //     ...state[modalId],
+      //     visible: false,
+      //   },
+      // }
+      const newState = { ...state }
+      delete newState[modalId]
+      console.log('after remove', {
+        newState,
+        MODAL_REGISTRY,
+      })
+      return newState
     }
     case 'nice-modal/remove': {
       const { modalId } = action.payload

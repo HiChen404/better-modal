@@ -24,10 +24,19 @@ export function show({
   dispatch: Dispatch<NiceModalAction>
 }) {
   const modalId = getModalId(modal)
-  console.log(MODAL_REGISTRY)
-
-  if (typeof modal !== 'string' && !MODAL_REGISTRY[modalId]) {
-    register({ comp: modal, providerId: providerId, modalId: modalId })
-  }
+  // if (typeof modal !== 'string' && !MODAL_REGISTRY[modalId]) {
+  //   register({ comp: modal, providerId: providerId, modalId: modalId })
+  // }
   dispatch(showModal(modalId, args))
+}
+
+export function remove({ modal, dispatch }: { modal: FC<any> | string; dispatch: Dispatch<NiceModalAction> }) {
+  const modalId = getModalId(modal)
+
+  dispatch({
+    type: 'nice-modal/remove',
+    payload: {
+      modalId,
+    },
+  })
 }

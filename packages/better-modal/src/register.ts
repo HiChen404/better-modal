@@ -31,3 +31,9 @@ export const register = <T extends React.FC<any>>({
     visible: true,
   }
 }
+
+export const unregister = ({ providerId, modalId }: { providerId: string | number; modalId: string }): void => {
+  if (MODAL_REGISTRY[providerId]) {
+    delete MODAL_REGISTRY[providerId][modalId]
+  }
+}

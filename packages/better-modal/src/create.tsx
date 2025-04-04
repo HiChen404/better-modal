@@ -1,5 +1,4 @@
 import React, { FC, useContext, useEffect } from 'react'
-import NiceModal from '.'
 import { NiceModalContext, NiceModalIdContext } from './context'
 import { useModal } from './hooks/useModal'
 
@@ -11,7 +10,7 @@ export interface NiceModalHocProps {
 
 export const create = <P extends {}>(Comp: React.ComponentType<P>): React.FC<P & NiceModalHocProps> => {
   return ({ defaultVisible, keepMounted, id, ...props }) => {
-    const { args, show } = useModal(id)
+    const { show } = useModal(id)
     const modals = useContext(NiceModalContext)
     const shouldMount = !!modals[id]
 
