@@ -1,27 +1,42 @@
-import { Dispatch, FC } from 'react'
-import { NiceModalStore } from './context'
-import { getModalId } from './utils'
-import { register } from './register'
-import { MODAL_REGISTRY } from './register'
-export interface NiceModalAction {
-  type: 'nice-modal/show' | 'nice-modal/hide' | 'nice-modal/remove'
-  payload: {
-    modalId: string
-    args?: Record<string, unknown>
-    flags?: Record<string, unknown>
-  }
-}
+/* *********************************************************
+ * Copyright 2021 eBay Inc.
 
-export const reducer = (state: NiceModalStore, action: NiceModalAction): NiceModalStore => {
+ * Use of this source code is governed by an MIT-style
+ * license that can be found in the LICENSE file or at
+ * https://opensource.org/licenses/MIT.
+*********************************************************** */
+
+import { FC } from 'react'
+import { NiceModalAction, NiceModalStore } from './types'
+
+// Tracking already mounted modals
+export const ALREADY_MOUNTED: Record<string, boolean> = {}
+
+export const MODAL_REGISTRY: {
+  [id: string]: {
+    comp: FC<any>
+    props?: Record<string, unknown>
+  }
+} = {}
+
+const initialState: NiceModalStore = {}
+
+// Modal reducer used in useReducer hook.
+export const reducer = (state: NiceModalStore = initialState, action: NiceModalAction): NiceModalStore => {
   switch (action.type) {
     case 'nice-modal/show': {
       const { modalId, args } = action.payload
-
       return {
         ...state,
         [modalId]: {
+          ...state[modalId],
           id: modalId,
-          visible: true,
+          args,
+          // If modal is not mounted, mount it first then make it visible.
+          // There is logic inside HOC wrapper to make it visible after its first mount.
+          // This mechanism ensures the entering transition.
+          visible: !!ALREADY_MOUNTED[modalId],
+          delayVisible: !ALREADY_MOUNTED[modalId],
         },
       }
     }
@@ -32,7 +47,6 @@ export const reducer = (state: NiceModalStore, action: NiceModalAction): NiceMod
         ...state,
         [modalId]: {
           ...state[modalId],
-          id: modalId,
           visible: false,
         },
       }
@@ -40,50 +54,20 @@ export const reducer = (state: NiceModalStore, action: NiceModalAction): NiceMod
     case 'nice-modal/remove': {
       const { modalId } = action.payload
       const newState = { ...state }
-      // TODO:unregister
       delete newState[modalId]
-
       return newState
     }
+    case 'nice-modal/set-flags': {
+      const { modalId, flags } = action.payload
+      return {
+        ...state,
+        [modalId]: {
+          ...state[modalId],
+          ...flags,
+        },
+      }
+    }
     default:
-      console.error(`Unknown action type: ${action.type}`)
       return state
   }
-}
-
-function showModal(modalId: string, args?: Record<string, unknown>): NiceModalAction {
-  return {
-    type: 'nice-modal/show',
-    payload: {
-      modalId,
-      args,
-    },
-  }
-}
-
-export function show(modal: FC<any> | string, args: Record<string, unknown> = {}) {
-  const modalId = getModalId(modal)
-  if (typeof modal !== 'string' && !MODAL_REGISTRY[modalId]) {
-    register({ comp: modal, modalId: modalId })
-  }
-  ALL_DISPATCHES[id]?.dispatch(showModal(modalId, args))
-}
-
-export function remove({ modal, dispatch }: { modal: FC<any> | string; dispatch: Dispatch<NiceModalAction> }) {
-  const modalId = getModalId(modal)
-
-  dispatch({
-    type: 'nice-modal/remove',
-    payload: {
-      modalId,
-    },
-  })
-}
-
-export function hide({ modal, dispatch }: { modal: FC<any> | string; dispatch: Dispatch<NiceModalAction> }) {
-  const modalId = getModalId(modal)
-  dispatch({
-    type: 'nice-modal/hide',
-    payload: { modalId },
-  })
 }

@@ -24,9 +24,7 @@ import React, {
   ComponentProps,
   ComponentType,
   JSXElementConstructor,
-  useState,
 } from 'react'
-import { getRandomId } from './context'
 
 export interface NiceModalState {
   id: string
@@ -105,11 +103,11 @@ export interface NiceModalHocProps {
 const symModalId = Symbol('NiceModalId')
 const initialState: NiceModalStore = {}
 const DEFAULT_DISPATCH = () => {
-  // deprecated_dispatch = DEFAULT_DISPATCH
   throw new Error('No dispatch method detected, did you embed your app with NiceModal.Provider?')
 }
 export const NiceModalContext = createContext<NiceModalStore>(initialState)
 export const DispatchContext = createContext<Dispatch<NiceModalAction>>(DEFAULT_DISPATCH)
+export const ProviderIdContext = createContext<string | null>(null)
 const NiceModalIdContext = createContext<string | null>(null)
 const MODAL_REGISTRY: {
   [id: string]: {
@@ -118,18 +116,13 @@ const MODAL_REGISTRY: {
   }
 } = {}
 const ALREADY_MOUNTED: Record<string, boolean> = {}
-declare module 'react' {
-  interface FunctionComponent {
-    [symModalId]?: string
-  }
-}
 const getUid = () => `_nice_modal_${uidSeed++}`
 let uidSeed = 0
 /**
  * @deprecated We will deprecate this API because it encounters reference errors in nested provider scenarios.
  * @see useModal()
  */
-let deprecated_dispatch: Dispatch<NiceModalAction> = DEFAULT_DISPATCH
+let deprecated_dispatch: Record<string, Dispatch<NiceModalAction>> = {}
 
 // Modal reducer used in useReducer hook.
 export const reducer = (state: NiceModalStore = initialState, action: NiceModalAction): NiceModalStore => {
@@ -245,23 +238,27 @@ type NiceModalArgs<T> = T extends keyof JSX.IntrinsicElements | JSXElementConstr
 export function show<T, C, P extends Partial<NiceModalArgs<FC<C>>>>(
   modal: FC<C>,
   args?: P,
-  dispatch?: Dispatch<NiceModalAction>
+  // dispatch?: Dispatch<NiceModalAction>
+  providerId?: string
 ): Promise<T>
 
-export function show<T>(modal: string, args?: Record<string, unknown>, dispatch?: Dispatch<NiceModalAction>): Promise<T>
-export function show<T, P>(modal: string, args: P, dispatch?: Dispatch<NiceModalAction>): Promise<T>
+export function show<T>(modal: string, args?: Record<string, unknown>, providerId?: string): Promise<T>
+export function show<T, P>(modal: string, args: P, providerId?: string): Promise<T>
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function show(
   modal: FC<any> | string,
   args?: NiceModalArgs<FC<any>> | Record<string, unknown>,
-  dispatch?: Dispatch<NiceModalAction>
+  // dispatch?: Dispatch<NiceModalAction>,
+  providerId?: string
 ) {
   const modalId = getModalId(modal)
   if (typeof modal !== 'string' && !MODAL_REGISTRY[modalId]) {
     register(modalId, modal as FC)
   }
-  ;(dispatch || deprecated_dispatch)(showModal(modalId, args))
+  const dispatch = providerId ? deprecated_dispatch[providerId] : deprecated_dispatch['default']
+  console.log('🚀 -> dispatch:', dispatch)
+  dispatch(showModal(modalId, args))
   if (!modalCallbacks[modalId]) {
     // `!` tell ts that theResolve will be written before it is used
     let theResolve!: (args?: unknown) => void
@@ -282,9 +279,10 @@ export function show(
 
 export function hide<T>(modal: string | FC<any>, dispatch?: Dispatch<NiceModalAction>): Promise<T>
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-export function hide(modal: string | FC<any>, dispatch?: Dispatch<NiceModalAction>) {
+export function hide(modal: string | FC<any>, providerId?: string) {
   const modalId = getModalId(modal)
-  ;(dispatch || deprecated_dispatch)(hideModal(modalId))
+  const dispatch = providerId ? deprecated_dispatch[providerId] : deprecated_dispatch['default']
+  dispatch(hideModal(modalId))
   // Should also delete the callback for modal.resolve #35
   delete modalCallbacks[modalId]
   if (!hideModalCallbacks[modalId]) {
@@ -305,15 +303,15 @@ export function hide(modal: string | FC<any>, dispatch?: Dispatch<NiceModalActio
   return hideModalCallbacks[modalId].promise
 }
 
-export const remove = (modal: string | FC<any>, dispatch?: Dispatch<NiceModalAction>): void => {
+export const remove = (modal: string | FC<any>, providerId?: string): void => {
   const modalId = getModalId(modal)
-  ;(dispatch || deprecated_dispatch)(removeModal(modalId))
+  ;(providerId ? deprecated_dispatch[providerId] : deprecated_dispatch['default'])(removeModal(modalId))
   delete modalCallbacks[modalId]
   delete hideModalCallbacks[modalId]
 }
 
-const setFlags = (modalId: string, flags: Record<string, unknown>, dispatch?: Dispatch<NiceModalAction>): void => {
-  ;(dispatch || deprecated_dispatch)(setModalFlags(modalId, flags))
+const setFlags = (modalId: string, flags: Record<string, unknown>): void => {
+  deprecated_dispatch(setModalFlags(modalId, flags))
 }
 export function useModal(): NiceModalHandler
 export function useModal(modal: string, args?: Record<string, unknown>): NiceModalHandler
@@ -329,6 +327,7 @@ export function useModal(modal?: any, args?: any): any {
   const modals = useContext(NiceModalContext)
   const dispatch = useContext(DispatchContext)
   const contextModalId = useContext(NiceModalIdContext)
+  const providerId = useContext(ProviderIdContext)
   let modalId: string | null = null
   const isUseComponent = modal && typeof modal !== 'string'
   if (!modal) {
@@ -350,9 +349,9 @@ export function useModal(modal?: any, args?: any): any {
 
   const modalInfo = modals[mid]
 
-  const showCallback = useCallback((args?: Record<string, unknown>) => show(mid, args, dispatch), [mid, dispatch])
-  const hideCallback = useCallback(() => hide(mid, dispatch), [mid, dispatch])
-  const removeCallback = useCallback(() => remove(mid, dispatch), [mid, dispatch])
+  const showCallback = useCallback((args?: Record<string, unknown>) => show(mid, args, providerId), [mid])
+  const hideCallback = useCallback(() => hide(mid, providerId), [mid])
+  const removeCallback = useCallback(() => remove(mid, providerId), [mid])
   const resolveCallback = useCallback(
     (args?: unknown) => {
       modalCallbacks[mid]?.resolve(args)
@@ -441,7 +440,7 @@ export const create = <P extends {}>(Comp: ComponentType<P>): FC<P & NiceModalHo
     if (!shouldMount) return null
     return (
       <NiceModalIdContext.Provider value={id}>
-        <Comp {...(props as unknown as P)} {...args} />
+        <Comp {...(props as P)} {...args} />
       </NiceModalIdContext.Provider>
     )
   }
@@ -469,7 +468,6 @@ export const unregister = (id: string): void => {
 const NiceModalPlaceholder: FC = () => {
   const modals = useContext(NiceModalContext)
   const visibleModalIds = Object.keys(modals).filter((id) => !!modals[id])
-  // biome-ignore lint/complexity/noForEach: <explanation>
   visibleModalIds.forEach((id) => {
     if (!MODAL_REGISTRY[id] && !ALREADY_MOUNTED[id]) {
       console.warn(`No modal found for id: ${id}. Please check the id or if it is registered or declared via JSX.`)
@@ -493,42 +491,58 @@ const NiceModalPlaceholder: FC = () => {
   )
 }
 
-const InnerContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
+const InnerContextProvider: FC<{ children: ReactNode; providerId: string }> = ({ children, providerId }) => {
   const [modals, dispatch] = useReducer(reducer, initialState)
   const parentDispatch = useContext(DispatchContext)
 
   if (parentDispatch === DEFAULT_DISPATCH) {
-    deprecated_dispatch = dispatch
+    deprecated_dispatch = { default: dispatch }
+  }
+
+  if (deprecated_dispatch['default']) {
+    deprecated_dispatch[providerId] = dispatch
   }
 
   return (
-    <NiceModalContext.Provider value={modals}>
-      <DispatchContext.Provider value={dispatch}>
-        {children}
-        <NiceModalPlaceholder />
-      </DispatchContext.Provider>
-    </NiceModalContext.Provider>
+    <ProviderIdContext.Provider value={providerId}>
+      <NiceModalContext.Provider value={modals}>
+        <DispatchContext.Provider value={dispatch}>
+          {children}
+          <NiceModalPlaceholder />
+        </DispatchContext.Provider>
+      </NiceModalContext.Provider>
+    </ProviderIdContext.Provider>
   )
+}
+
+const getRandomId = () => {
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
 }
 
 export const Provider: FC<{
   children: ReactNode
   modals?: NiceModalStore
   dispatch?: Dispatch<NiceModalAction>
-  [key: string]: unknown
-}> = ({ children, dispatch: givenDispatch, modals: givenModals }) => {
+  providerId?: string
+}> = ({ children, dispatch: givenDispatch, modals: givenModals, providerId = getRandomId() }) => {
+  const parentDispatch = useContext(DispatchContext)
   if (!givenDispatch || !givenModals) {
-    return <InnerContextProvider>{children}</InnerContextProvider>
+    return <InnerContextProvider providerId={providerId}>{children}</InnerContextProvider>
   }
-  deprecated_dispatch = givenDispatch
+
+  // if (parentDispatch === DEFAULT_DISPATCH) {
+  //   deprecated_dispatch = givenDispatch
+  // }
 
   return (
-    <NiceModalContext.Provider value={givenModals}>
-      <DispatchContext.Provider value={givenDispatch}>
-        {children}
-        <NiceModalPlaceholder />
-      </DispatchContext.Provider>
-    </NiceModalContext.Provider>
+    <ProviderIdContext.Provider value={providerId}>
+      <NiceModalContext.Provider value={givenModals}>
+        <DispatchContext.Provider value={givenDispatch}>
+          {children}
+          <NiceModalPlaceholder />
+        </DispatchContext.Provider>
+      </NiceModalContext.Provider>
+    </ProviderIdContext.Provider>
   )
 }
 
