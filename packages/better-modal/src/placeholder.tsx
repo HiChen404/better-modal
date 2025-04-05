@@ -4,22 +4,18 @@ import { MODAL_REGISTRY } from './register'
 
 export const NiceModalPlaceholder: FC = () => {
   const modals = useContext(NiceModalContext)
-  const providerId = useContext(NiceModalProviderIdContext)
 
-  const visibleModalIds = Object.values(modals)
-  console.log('🚀 -> visibleModalIds:', visibleModalIds)
-
-  const toRender = visibleModalIds
-    .filter((id) => MODAL_REGISTRY[providerId][id])
-    .map((id) => ({
-      id,
-      ...MODAL_REGISTRY[providerId][id],
-    }))
+  const toRender = Object.values(modals).map((modal) => {
+    return {
+      ...modal,
+      ...MODAL_REGISTRY[modal.id],
+    }
+  })
 
   return (
     <>
       {toRender.map((t) => (
-        <t.comp key={t.id} id={t.id} {...t.props} />
+        <t.comp key={t.id} id={t.id} />
       ))}
     </>
   )

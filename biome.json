@@ -25,7 +25,8 @@
       "recommended": true,
       "suspicious": { "noExplicitAny": "warn" },
       "style": {
-        "useImportType": "off"
+        "useImportType": "off",
+        "useDefaultParameterLast": "off"
       },
       "a11y": {
         "useKeyWithClickEvents": "off",

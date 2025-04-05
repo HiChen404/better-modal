@@ -1,39 +1,29 @@
-export const MODAL_REGISTRY: Record<
-  string,
-  Record<
-    string,
-    {
-      comp: React.FC<any>
-      visible?: boolean
-      props?: Record<string, unknown>
-    }
-  >
-> = {}
+export const MODAL_REGISTRY: {
+  [id: string]: {
+    comp: React.FC<any>
+    props?: Record<string, unknown>
+  }
+} = {}
+
 export type NiceModalArgs<T> = T extends keyof JSX.IntrinsicElements | React.JSXElementConstructor<any>
   ? React.ComponentProps<T>
   : Record<string, unknown>
 
 export const register = <T extends React.FC<any>>({
-  providerId,
   modalId,
   comp,
 }: {
-  providerId: string | number
   modalId: string
   comp: T
   props?: Partial<NiceModalArgs<T>>
 }): void => {
-  if (!MODAL_REGISTRY[providerId]) {
-    MODAL_REGISTRY[providerId] = {}
-  }
-  MODAL_REGISTRY[providerId][modalId] = {
+  MODAL_REGISTRY[modalId] = {
     comp,
-    visible: true,
   }
 }
 
-export const unregister = ({ providerId, modalId }: { providerId: string | number; modalId: string }): void => {
-  if (MODAL_REGISTRY[providerId]) {
-    delete MODAL_REGISTRY[providerId][modalId]
+export const unregister = ({ modalId }: { modalId: string }): void => {
+  if (MODAL_REGISTRY[modalId]) {
+    delete MODAL_REGISTRY[modalId]
   }
 }

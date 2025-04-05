@@ -1,0 +1,29 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+    {
+      "type": "npm",
+      "script": "dev",
+      "path": "apps/web",
+      "problemMatcher": [],
+      "label": "web 开发",
+      "detail": "vite"
+    },
+    {
+      "type": "npm",
+      "script": "dev",
+      "path": "apps/web-nice-modal",
+      "problemMatcher": [],
+      "label": "web-nice-modal 开发",
+      "detail": "vite"
+    },
+    {
+      "type": "npm",
+      "script": "dev",
+      "path": "packages/better-modal",
+    "problemMatcher": [],
+      "label": "better-modal 开发",
+      "detail": "vite"
+    },
+  ]
+}
