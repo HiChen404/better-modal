@@ -178,8 +178,10 @@ export const create = <P extends {}>(Comp: ComponentType<P>): FC<P & NiceModalHo
     const { args, show } = useModal(id)
 
     // If there's modal state, then should mount it.
-    const modals = useBearContext((s) => s.modals)
-    const shouldMount = !!modals[id]
+    // const modals = useBearContext((s) => s.modals)
+    // const shouldMount = !!modals[id]
+    const shouldMount = useBearContext((s) => !!s.modals[id])
+    const delayVisible = useBearContext((s) => !!s.modals[id].delayVisible)
 
     useEffect(() => {
       // If defaultVisible, show it after mounted.
@@ -198,7 +200,7 @@ export const create = <P extends {}>(Comp: ComponentType<P>): FC<P & NiceModalHo
       if (keepMounted) setFlags(id, { keepMounted: true })
     }, [id, keepMounted])
 
-    const delayVisible = modals[id]?.delayVisible
+    // const delayVisible = modals[id]?.delayVisible
     // If modal.show is called
     //  1. If modal was mounted, should make it visible directly
     //  2. If modal has not been mounted, should mount it first, then make it visible

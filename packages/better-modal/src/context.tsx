@@ -1,5 +1,7 @@
 import { createContext, Dispatch, FC, PropsWithChildren, useContext, useMemo, useRef } from 'react'
 import { createStore, useStore } from 'zustand'
+import { useShallow } from 'zustand/react/shallow'
+
 import { devtools } from 'zustand/middleware'
 import { ALREADY_MOUNTED, MODAL_REGISTRY } from '.'
 import { reducer } from './reducer'
@@ -71,14 +73,16 @@ export function useBearContext<T>(selector: (state: BearState) => T): T {
   if (!store) throw new Error('Missing BearContext.Provider in the tree')
   return useStore(store, selector)
 }
+
 export function useSafeBearContext<T>(selector: (state: BearState) => T): T | undefined {
   const store = useContext(BearContext)
   if (!store) return undefined
-  return useStore(store, selector)
+  return useStore(store, useShallow(selector))
 }
 
 const NiceModalPlaceholder: FC = () => {
   const modals = useBearContext((s) => s.modals)
+
   const visibleModalIds = Object.keys(modals).filter((id) => !!modals[id])
   // biome-ignore lint/complexity/noForEach: <explanation>
   visibleModalIds.forEach((id) => {
