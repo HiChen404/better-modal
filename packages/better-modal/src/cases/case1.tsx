@@ -1,5 +1,3 @@
-import NiceModal from '../../origin'
-
 // 嵌套情况
 const App = () => {
   return (

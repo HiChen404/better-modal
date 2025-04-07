@@ -1,23 +1,20 @@
-import { ComponentType, Dispatch, FC, ReactNode, useCallback, useContext, useEffect, useMemo, useReducer } from 'react'
+import { ComponentType, FC, useCallback, useContext, useEffect, useMemo } from 'react'
 import { antdDrawer, antdModal, bootstrapDialog, muiDialog } from './adapters'
 import {
-  DEFAULT_DISPATCH,
-  initialState,
-  DispatchContext,
   NiceModalContext,
   NiceModalIdContext,
+  Provider,
   ProviderIdContext,
+  all_dispatch
 } from './context'
 import { hideModal, reducer, removeModal, setModalFlags, showModal } from './reducer'
 
 import {
   ModalRegistry,
-  NiceModalAction,
   NiceModalArgs,
   NiceModalCallbacks,
   NiceModalHandler,
-  NiceModalHocProps,
-  NiceModalStore,
+  NiceModalHocProps
 } from './types'
 import { createPromise, getModalId, getUid } from './utils'
 
@@ -29,11 +26,9 @@ declare module 'react' {
   }
 }
 
-const MODAL_REGISTRY: ModalRegistry = {}
+export const MODAL_REGISTRY: ModalRegistry = {}
 
 export const ALREADY_MOUNTED: Record<string, boolean> = {}
-
-let all_dispatch: Record<string, Dispatch<NiceModalAction>> = {}
 
 // Get modal component by modal id
 function getModal(modalId: string) {
@@ -247,85 +242,6 @@ export const register = <T extends FC>(id: string, comp: T, props?: Partial<Nice
  */
 export const unregister = (id: string): void => {
   delete MODAL_REGISTRY[id]
-}
-
-// The placeholder component is used to auto render modals when call modal.show()
-// When modal.show() is called, it means there've been modal info
-const NiceModalPlaceholder: FC = () => {
-  const modals = useContext(NiceModalContext)
-  const visibleModalIds = Object.keys(modals).filter((id) => !!modals[id])
-  // biome-ignore lint/complexity/noForEach: <explanation>
-  visibleModalIds.forEach((id) => {
-    if (!MODAL_REGISTRY[id] && !ALREADY_MOUNTED[id]) {
-      console.warn(`No modal found for id: ${id}. Please check the id or if it is registered or declared via JSX.`)
-      return
-    }
-  })
-
-  const toRender = visibleModalIds
-    .filter((id) => MODAL_REGISTRY[id])
-    .map((id) => ({
-      id,
-      ...MODAL_REGISTRY[id],
-    }))
-
-  return (
-    <>
-      {toRender.map((t) => (
-        <t.comp key={t.id} id={t.id} {...t.props} />
-      ))}
-    </>
-  )
-}
-
-const InnerContextProvider: FC<{ children: ReactNode; providerId: string }> = ({ children, providerId }) => {
-  const [modals, dispatch] = useReducer(reducer, initialState)
-  const parentDispatch = useContext(DispatchContext)
-
-  if (parentDispatch === DEFAULT_DISPATCH) {
-    all_dispatch = { default: dispatch }
-  }
-
-  if (all_dispatch['default']) {
-    all_dispatch[providerId] = dispatch
-  }
-
-  return (
-    <ProviderIdContext.Provider value={providerId}>
-      <NiceModalContext.Provider value={modals}>
-        <DispatchContext.Provider value={dispatch}>
-          {children}
-          <NiceModalPlaceholder />
-        </DispatchContext.Provider>
-      </NiceModalContext.Provider>
-    </ProviderIdContext.Provider>
-  )
-}
-
-const getRandomId = () => {
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
-}
-
-export const Provider: FC<{
-  children: ReactNode
-  modals?: NiceModalStore
-  dispatch?: Dispatch<NiceModalAction>
-  providerId?: string
-}> = ({ children, dispatch: givenDispatch, modals: givenModals, providerId = getRandomId() }) => {
-  if (!givenDispatch || !givenModals) {
-    return <InnerContextProvider providerId={providerId}>{children}</InnerContextProvider>
-  }
-
-  return (
-    <ProviderIdContext.Provider value={providerId}>
-      <NiceModalContext.Provider value={givenModals}>
-        <DispatchContext.Provider value={givenDispatch}>
-          {children}
-          <NiceModalPlaceholder />
-        </DispatchContext.Provider>
-      </NiceModalContext.Provider>
-    </ProviderIdContext.Provider>
-  )
 }
 
 /**
