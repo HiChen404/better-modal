@@ -1,10 +1,7 @@
 import { ALREADY_MOUNTED } from '.'
+import { initialState } from './context'
 import { NiceModalAction, NiceModalStore } from './types'
 
-export const DEFAULT_DISPATCH = () => {
-  throw new Error('No dispatch method detected, did you embed your app with NiceModal.Provider?')
-}
-export const initialState: NiceModalStore = {}
 
 // Modal reducer used in useReducer hook.
 export const reducer = (

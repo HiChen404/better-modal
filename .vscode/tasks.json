@@ -4,9 +4,9 @@
     {
       "type": "npm",
       "script": "dev",
-      "path": "apps/web",
+      "path": "apps/web-better-modal",
       "problemMatcher": [],
-      "label": "web 开发",
+      "label": "better-modal UI Web",
       "detail": "vite"
     },
     {
@@ -14,7 +14,7 @@
       "script": "dev",
       "path": "apps/web-nice-modal",
       "problemMatcher": [],
-      "label": "web-nice-modal 开发",
+      "label": "web-nice-modal UI Web",
       "detail": "vite"
     },
     {
@@ -22,7 +22,7 @@
       "script": "dev",
       "path": "packages/better-modal",
     "problemMatcher": [],
-      "label": "better-modal 开发",
+      "label": "better-modal lib 开发",
       "detail": "开发better-modal npm 包"
     },
   ]

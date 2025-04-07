@@ -1,7 +1,15 @@
 import { ComponentType, Dispatch, FC, ReactNode, useCallback, useContext, useEffect, useMemo, useReducer } from 'react'
 import { antdDrawer, antdModal, bootstrapDialog, muiDialog } from './adapters'
-import { DispatchContext, NiceModalContext, NiceModalIdContext, ProviderIdContext } from './context'
-import { DEFAULT_DISPATCH, hideModal, initialState, reducer, removeModal, setModalFlags, showModal } from './reducer'
+import {
+  DEFAULT_DISPATCH,
+  initialState,
+  DispatchContext,
+  NiceModalContext,
+  NiceModalIdContext,
+  ProviderIdContext,
+} from './context'
+import { hideModal, reducer, removeModal, setModalFlags, showModal } from './reducer'
+
 import {
   ModalRegistry,
   NiceModalAction,
