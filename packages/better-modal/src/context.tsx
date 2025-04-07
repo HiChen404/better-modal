@@ -1,4 +1,4 @@
-import { createContext, Dispatch, FC, PropsWithChildren, useContext, useRef } from 'react'
+import { createContext, Dispatch, FC, PropsWithChildren, useContext, useMemo, useRef } from 'react'
 import { createStore, useStore } from 'zustand'
 import { devtools } from 'zustand/middleware'
 import { ALREADY_MOUNTED, MODAL_REGISTRY } from '.'
@@ -24,7 +24,7 @@ interface BearProps {
   modalId?: string
 }
 
-interface BearState extends BearProps {
+export interface BearState extends BearProps {
   dispatch: Dispatch<NiceModalAction>
 }
 
@@ -59,6 +59,10 @@ function BearProvider({ children, ...props }: BearProviderProps) {
   if (!storeRef.current) {
     storeRef.current = createBearStore(props)
   }
+  if (storeRef.current.getState().providerId !== props.providerId) {
+    storeRef.current = createBearStore(props)
+  }
+
   return <BearContext.Provider value={storeRef.current}>{children}</BearContext.Provider>
 }
 
@@ -124,14 +128,16 @@ const DistributeDispatch = ({ isTopLevel, providerId }: { isTopLevel: boolean; p
 
 export const Provider: FC<PropsWithChildren<Partial<Omit<BearState, 'isTopLevel'>>>> = ({
   children,
-  providerId = getRandomId(),
+  providerId,
   ...props
 }) => {
-  const isTopLevel = useInitDispatch().isTopLevel
+  const { isTopLevel } = useInitDispatch()
+  const resolvedProviderId = useMemo(() => providerId || getRandomId(), [providerId])
+
   return (
-    <BearProvider isTopLevel={isTopLevel} providerId={providerId} {...props}>
+    <BearProvider isTopLevel={isTopLevel} providerId={resolvedProviderId} {...props}>
       {children}
-      <DistributeDispatch isTopLevel={isTopLevel} providerId={providerId} />
+      <DistributeDispatch isTopLevel={isTopLevel} providerId={resolvedProviderId} />
       <NiceModalPlaceholder />
     </BearProvider>
   )

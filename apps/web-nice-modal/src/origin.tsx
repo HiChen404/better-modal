@@ -11,20 +11,7 @@
  * @module NiceModal
  * */
 
-import React, {
-  useEffect,
-  useCallback,
-  useContext,
-  useReducer,
-  useMemo,
-  createContext,
-  FC,
-  Dispatch,
-  ReactNode,
-  ComponentProps,
-  ComponentType,
-  JSXElementConstructor
-} from 'react';
+import React, { useEffect, useCallback, useContext, useReducer, useMemo, ReactNode } from 'react';
 
 export interface NiceModalState {
   id: string;
@@ -102,26 +89,21 @@ export interface NiceModalHocProps {
 }
 const symModalId = Symbol('NiceModalId');
 const initialState: NiceModalStore = {};
-const DEFAULT_DISPATCH = () => {
-  throw new Error('No dispatch method detected, did you embed your app with NiceModal.Provider?');
-};
-export const NiceModalContext = createContext<NiceModalStore>(initialState);
-export const DispatchContext = createContext<Dispatch<NiceModalAction>>(DEFAULT_DISPATCH);
-const NiceModalIdContext = createContext<string | null>(null);
+export const NiceModalContext = React.createContext<NiceModalStore>(initialState);
+const NiceModalIdContext = React.createContext<string | null>(null);
 const MODAL_REGISTRY: {
   [id: string]: {
-    comp: FC<any>;
+    comp: React.FC<any>;
     props?: Record<string, unknown>;
   };
 } = {};
-const ALREADY_MOUNTED: Record<string, boolean> = {};
-const getUid = () => `_nice_modal_${uidSeed++}`;
+const ALREADY_MOUNTED = {};
+
 let uidSeed = 0;
-/**
- * @deprecated We will deprecate this API because it encounters reference errors in nested provider scenarios.
- * @see useModal()
- */
-let deprecated_dispatch: Dispatch<NiceModalAction> = DEFAULT_DISPATCH;
+let dispatch: React.Dispatch<NiceModalAction> = () => {
+  throw new Error('No dispatch method detected, did you embed your app with NiceModal.Provider?');
+};
+const getUid = () => `_nice_modal_${uidSeed++}`;
 
 // Modal reducer used in useReducer hook.
 export const reducer = (
@@ -178,7 +160,7 @@ export const reducer = (
 };
 
 // Get modal component by modal id
-function getModal(modalId: string): FC<any> | undefined {
+function getModal(modalId: string): React.FC<any> | undefined {
   return MODAL_REGISTRY[modalId]?.comp;
 }
 
@@ -225,7 +207,7 @@ function removeModal(modalId: string): NiceModalAction {
 
 const modalCallbacks: NiceModalCallbacks = {};
 const hideModalCallbacks: NiceModalCallbacks = {};
-const getModalId = (modal: string | FC<any>): string => {
+const getModalId = (modal: string | React.FC<any>): string => {
   if (typeof modal === 'string') return modal as string;
   if (!modal[symModalId]) {
     modal[symModalId] = getUid();
@@ -233,31 +215,29 @@ const getModalId = (modal: string | FC<any>): string => {
   return modal[symModalId];
 };
 
-type NiceModalArgs<T> = T extends keyof JSX.IntrinsicElements | JSXElementConstructor<any>
-  ? ComponentProps<T>
+type NiceModalArgs<T> = T extends keyof JSX.IntrinsicElements | React.JSXElementConstructor<any>
+  ? React.ComponentProps<T>
   : Record<string, unknown>;
 
-export function show<T extends any, C extends any, P extends Partial<NiceModalArgs<FC<C>>>>(
-  modal: FC<C>,
+export function show<T extends any, C extends any, P extends Partial<NiceModalArgs<React.FC<C>>>>(
+  modal: React.FC<C>,
   args?: P,
-  dispatch?: Dispatch<NiceModalAction>,
 ): Promise<T>;
 
-export function show<T extends any>(modal: string, args?: Record<string, unknown>, dispatch?: Dispatch<NiceModalAction>): Promise<T>;
-export function show<T extends any, P extends any>(modal: string, args: P, dispatch?: Dispatch<NiceModalAction>): Promise<T>;
+export function show<T extends any>(modal: string, args?: Record<string, unknown>): Promise<T>;
+export function show<T extends any, P extends any>(modal: string, args: P): Promise<T>;
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function show(
-  modal: FC<any> | string,
-  args?: NiceModalArgs<FC<any>> | Record<string, unknown>,
-  dispatch?: Dispatch<NiceModalAction>
+  modal: React.FC<any> | string,
+  args?: NiceModalArgs<React.FC<any>> | Record<string, unknown>,
 ) {
   const modalId = getModalId(modal);
   if (typeof modal !== 'string' && !MODAL_REGISTRY[modalId]) {
-    register(modalId, modal as FC);
+    register(modalId, modal as React.FC);
   }
 
-  (dispatch || deprecated_dispatch)(showModal(modalId, args));
+  dispatch(showModal(modalId, args));
   if (!modalCallbacks[modalId]) {
     // `!` tell ts that theResolve will be written before it is used
     let theResolve!: (args?: unknown) => void;
@@ -276,11 +256,11 @@ export function show(
   return modalCallbacks[modalId].promise;
 }
 
-export function hide<T>(modal: string | FC<any>, dispatch?: Dispatch<NiceModalAction>): Promise<T>;
+export function hide<T>(modal: string | React.FC<any>): Promise<T>;
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-export function hide(modal: string | FC<any>, dispatch?: Dispatch<NiceModalAction>) {
+export function hide(modal: string | React.FC<any>) {
   const modalId = getModalId(modal);
-  (dispatch || deprecated_dispatch)(hideModal(modalId));
+  dispatch(hideModal(modalId));
   // Should also delete the callback for modal.resolve #35
   delete modalCallbacks[modalId];
   if (!hideModalCallbacks[modalId]) {
@@ -301,21 +281,20 @@ export function hide(modal: string | FC<any>, dispatch?: Dispatch<NiceModalActio
   return hideModalCallbacks[modalId].promise;
 }
 
-export const remove = (modal: string | FC<any>, dispatch?: Dispatch<NiceModalAction>): void => {
+export const remove = (modal: string | React.FC<any>): void => {
   const modalId = getModalId(modal);
-
-  (dispatch || deprecated_dispatch)(removeModal(modalId));
+  dispatch(removeModal(modalId));
   delete modalCallbacks[modalId];
   delete hideModalCallbacks[modalId];
 };
 
 const setFlags = (modalId: string, flags: Record<string, unknown>): void => {
-  deprecated_dispatch(setModalFlags(modalId, flags));
+  dispatch(setModalFlags(modalId, flags));
 };
 export function useModal(): NiceModalHandler;
 export function useModal(modal: string, args?: Record<string, unknown>): NiceModalHandler;
-export function useModal<C extends any, P extends Partial<NiceModalArgs<FC<C>>>>(
-  modal: FC<C>,
+export function useModal<C extends any, P extends Partial<NiceModalArgs<React.FC<C>>>>(
+  modal: React.FC<C>,
   args?: P,
 ): Omit<NiceModalHandler, 'show'> & {
   show: (args?: P) => Promise<unknown>;
@@ -324,7 +303,6 @@ export function useModal<C extends any, P extends Partial<NiceModalArgs<FC<C>>>>
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function useModal(modal?: any, args?: any): any {
   const modals = useContext(NiceModalContext);
-  const dispatch = useContext(DispatchContext);
   const contextModalId = useContext(NiceModalIdContext);
   let modalId: string | null = null;
   const isUseComponent = modal && typeof modal !== 'string';
@@ -341,15 +319,15 @@ export function useModal(modal?: any, args?: any): any {
   // If use a component directly, register it.
   useEffect(() => {
     if (isUseComponent && !MODAL_REGISTRY[mid]) {
-      register(mid, modal as FC, args);
+      register(mid, modal as React.FC, args);
     }
   }, [isUseComponent, mid, modal, args]);
 
   const modalInfo = modals[mid];
 
-  const showCallback = useCallback((args?: Record<string, unknown>) => show(mid, args, dispatch), [mid]);
-  const hideCallback = useCallback(() => hide(mid, dispatch), [mid]);
-  const removeCallback = useCallback(() => remove(mid, dispatch), [mid]);
+  const showCallback = useCallback((args?: Record<string, unknown>) => show(mid, args), [mid]);
+  const hideCallback = useCallback(() => hide(mid), [mid]);
+  const removeCallback = useCallback(() => remove(mid), [mid]);
   const resolveCallback = useCallback(
     (args?: unknown) => {
       modalCallbacks[mid]?.resolve(args);
@@ -400,8 +378,8 @@ export function useModal(modal?: any, args?: any): any {
   );
 }
 export const create = <P extends {}>(
-  Comp: ComponentType<P>,
-): FC<P & NiceModalHocProps> => {
+  Comp: React.ComponentType<P>,
+): React.FC<P & NiceModalHocProps> => {
   return ({ defaultVisible, keepMounted, id, ...props }) => {
     const { args, show } = useModal(id);
 
@@ -447,7 +425,7 @@ export const create = <P extends {}>(
 };
 
 // All registered modals will be rendered in modal placeholder
-export const register = <T extends FC<any>>(
+export const register = <T extends React.FC<any>>(
   id: string,
   comp: T,
   props?: Partial<NiceModalArgs<T>>,
@@ -469,7 +447,7 @@ export const unregister = (id: string): void => {
 
 // The placeholder component is used to auto render modals when call modal.show()
 // When modal.show() is called, it means there've been modal info
-const NiceModalPlaceholder: FC = () => {
+const NiceModalPlaceholder: React.FC = () => {
   const modals = useContext(NiceModalContext);
   const visibleModalIds = Object.keys(modals).filter((id) => !!modals[id]);
   visibleModalIds.forEach((id) => {
@@ -497,43 +475,35 @@ const NiceModalPlaceholder: FC = () => {
   );
 };
 
-const InnerContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
-  const [modals, dispatch] = useReducer(reducer, initialState);
-
-  deprecated_dispatch = dispatch;
-
+const InnerContextProvider: React.FC = ({ children }) => {
+  const arr = useReducer(reducer, initialState);
+  const modals = arr[0];
+  dispatch = arr[1];
   return (
     <NiceModalContext.Provider value={modals}>
-      <DispatchContext.Provider value={dispatch}>
-        {children}
-        <NiceModalPlaceholder />
-      </DispatchContext.Provider>
+      {children}
+      <NiceModalPlaceholder />
     </NiceModalContext.Provider>
   );
 };
 
-export const Provider: FC<{
-  children: ReactNode,
-  modals?: NiceModalStore,
-  dispatch?: Dispatch<NiceModalAction>,
-  [key: string]: unknown,
-}> = ({
+export const Provider: React.FC<Record<string, unknown>> = ({
   children,
   dispatch: givenDispatch,
   modals: givenModals,
+}: {
+  children: ReactNode;
+  dispatch?: React.Dispatch<NiceModalAction>;
+  modals?: NiceModalStore;
 }) => {
   if (!givenDispatch || !givenModals) {
     return <InnerContextProvider>{children}</InnerContextProvider>;
   }
-
-  deprecated_dispatch = givenDispatch;
-
+  dispatch = givenDispatch;
   return (
     <NiceModalContext.Provider value={givenModals}>
-      <DispatchContext.Provider value={givenDispatch}>
-        {children}
-        <NiceModalPlaceholder />
-      </DispatchContext.Provider>
+      {children}
+      <NiceModalPlaceholder />
     </NiceModalContext.Provider>
   );
 };
@@ -544,12 +514,12 @@ export const Provider: FC<{
  * @param component - The modal Component.
  * @returns
  */
-export const ModalDef: FC<{
-  id: string,
-  component: FC<any>,
-}> = ({
+export const ModalDef: React.FC<Record<string, unknown>> = ({
   id,
   component,
+}: {
+  id: string;
+  component: React.FC<any>;
 }) => {
   useEffect(() => {
     register(id, component);
@@ -571,14 +541,14 @@ export const ModalDef: FC<{
  * @param handler - The handler object to control the modal.
  * @returns
  */
-export const ModalHolder: FC<{
-  modal: string | FC<any>;
-  handler: any;
-  [key: string]: unknown;
-}> = ({
+export const ModalHolder: React.FC<Record<string, unknown>> = ({
   modal,
   handler = {},
   ...restProps
+}: {
+  modal: string | React.FC<any>;
+  handler: any;
+  [key: string]: any;
 }) => {
   const mid = useMemo(() => getUid(), []);
   const ModalComp = typeof modal === 'string' ? MODAL_REGISTRY[modal]?.comp : modal;
@@ -594,6 +564,13 @@ export const ModalHolder: FC<{
 
   return <ModalComp id={mid} {...restProps} />;
 };
+
+export function createModalHandler<T extends React.ComponentType<any>>(): {
+  show: (args?: Omit<React.ComponentProps<T>, keyof NiceModalHocProps>) => Promise<unknown>;
+  hide: () => void;
+} {
+  return Object.create(null);
+}
 
 export const antdModal = (
   modal: NiceModalHandler,

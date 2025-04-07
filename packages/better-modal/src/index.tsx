@@ -1,12 +1,6 @@
 import { ComponentType, FC, useCallback, useContext, useEffect, useMemo } from 'react'
 import { antdDrawer, antdModal, bootstrapDialog, muiDialog } from './adapters'
-import {
-  NiceModalIdContext,
-  Provider,
-  // TOP_LEVEL_DISPATCH,
-  all_dispatch,
-  useBearContext,
-} from './context'
+import { NiceModalIdContext, Provider, all_dispatch, useBearContext } from './context'
 import { hideModal, reducer, removeModal, setModalFlags, showModal } from './reducer'
 
 import { ModalRegistry, NiceModalArgs, NiceModalCallbacks, NiceModalHandler, NiceModalHocProps } from './types'
@@ -293,8 +287,6 @@ export const ModalHolder: FC<{
 
 const NiceModal = {
   Provider,
-  ModalDef,
-  ModalHolder,
   create,
   register,
   getModal,
@@ -302,7 +294,6 @@ const NiceModal = {
   hide,
   remove,
   useModal,
-  reducer,
   antdModal,
   antdDrawer,
   muiDialog,

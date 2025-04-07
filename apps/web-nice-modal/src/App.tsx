@@ -1,16 +1,18 @@
-import NiceModal, { useModal } from './origin'
 import { useMemo, useState } from 'react'
 import './App.css'
 import Case1 from './cases/case1'
 import Case2 from './cases/case2'
 import Case3 from './cases/case3'
-import { Modal } from 'antd'
 import Case4 from './cases/case4'
+import Case5 from './cases/case5'
+import NestCase1 from './cases/nest_case1'
 const Cases = {
   case1: Case1,
   case2: Case2,
   case3: Case3,
   case4: Case4,
+  case5: Case5,
+  nestCase1: NestCase1,
 }
 
 function App() {
@@ -21,15 +23,6 @@ function App() {
   return (
     <>
       <div>
-        <button
-          type="button"
-          // onClick={() => NiceModal.show(TestModal)}
-          // onClick={() => {
-          //   modal.show()
-          // }}
-        >
-          顶级测试
-        </button>
         <div>
           {Object.entries(Cases).map(([key, Case]) => (
             <button key={key} onClick={() => setCurCase(key)} type="button">

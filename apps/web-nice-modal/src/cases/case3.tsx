@@ -19,12 +19,8 @@ export default function Case3() {
           Show Modal
         </Button>
         <div>Declarative https://opensource.ebay.com/nice-modal-react/#declarative</div>
-        {/* <Child /> */}
-        <MyAntdModal id="my
-        
-        
-        
-        -antd-modal" />
+        <Child />
+        <MyAntdModal id="my-antd-modal" />
       </NiceModal.Provider>
     </>
   )
