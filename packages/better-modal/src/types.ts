@@ -2,6 +2,7 @@ import { ComponentProps, FC, JSXElementConstructor } from 'react'
 
 type ModalID = string
 
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export type NiceModalArgs<T> = T extends keyof JSX.IntrinsicElements | JSXElementConstructor<any>
   ? ComponentProps<T>
   : Record<string, unknown>

@@ -225,7 +225,7 @@ export const create = <P extends {}>(Comp: ComponentType<P>): FC<P & NiceModalHo
 }
 
 // All registered modals will be rendered in modal placeholder
-export const register = <T extends FC<any>>(id: string, comp: T, props?: Partial<NiceModalArgs<T>>): void => {
+export const register = <T extends FC>(id: string, comp: T, props?: Partial<NiceModalArgs<T>>): void => {
   if (!MODAL_REGISTRY[id]) {
     MODAL_REGISTRY[id] = { comp, props }
   } else {
