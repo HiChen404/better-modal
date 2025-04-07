@@ -1,21 +1,15 @@
 import { ComponentType, FC, useCallback, useContext, useEffect, useMemo } from 'react'
 import { antdDrawer, antdModal, bootstrapDialog, muiDialog } from './adapters'
 import {
-  NiceModalContext,
   NiceModalIdContext,
   Provider,
-  ProviderIdContext,
-  all_dispatch
+  // TOP_LEVEL_DISPATCH,
+  all_dispatch,
+  useBearContext,
 } from './context'
 import { hideModal, reducer, removeModal, setModalFlags, showModal } from './reducer'
 
-import {
-  ModalRegistry,
-  NiceModalArgs,
-  NiceModalCallbacks,
-  NiceModalHandler,
-  NiceModalHocProps
-} from './types'
+import { ModalRegistry, NiceModalArgs, NiceModalCallbacks, NiceModalHandler, NiceModalHocProps } from './types'
 import { createPromise, getModalId, getUid } from './utils'
 
 const symModalId = Symbol('NiceModalId')
@@ -48,6 +42,8 @@ export function show<T>(modal: string, args?: Record<string, unknown>, providerI
 export function show<T, P>(modal: string, args: P, providerId?: string): Promise<T>
 
 export function show(modal: FC | string, args?: NiceModalArgs<FC> | Record<string, unknown>, providerId?: string) {
+  console.log('🚀 -> show -> providerId:', providerId)
+  console.log('🚀 -> show -> all_dispatch:', all_dispatch)
   const modalId = getModalId(modal)
   if (typeof modal !== 'string' && !MODAL_REGISTRY[modalId]) {
     register(modalId, modal as FC)
@@ -104,9 +100,10 @@ export function useModal<C, P extends Partial<NiceModalArgs<FC<C>>>>(
 }
 
 export function useModal(modal?: any, args?: any): any {
-  const modals = useContext(NiceModalContext)
+  const modals = useBearContext((s) => s.modals)
+  // const contextModalId = useBearContext((s) => s.modalId) as string
   const contextModalId = useContext(NiceModalIdContext)
-  const providerId = useContext(ProviderIdContext)
+  const providerId = useBearContext((s) => s.providerId)
   let modalId: string | null = null
   const isUseComponent = modal && typeof modal !== 'string'
   if (!modal) {
@@ -118,7 +115,7 @@ export function useModal(modal?: any, args?: any): any {
   if (!providerId) throw new Error('No Provider id found in NiceModal.useModal')
 
   // Only if contextModalId doesn't exist
-  if (!modalId) throw new Error('No modal id found in NiceModal.useModal.')
+  // if (!modalId) throw new Error('No modal id found in NiceModal.useModal.')
 
   const mid = modalId as string
   // If use a component directly, register it.
@@ -187,7 +184,7 @@ export const create = <P extends {}>(Comp: ComponentType<P>): FC<P & NiceModalHo
     const { args, show } = useModal(id)
 
     // If there's modal state, then should mount it.
-    const modals = useContext(NiceModalContext)
+    const modals = useBearContext((s) => s.modals)
     const shouldMount = !!modals[id]
 
     useEffect(() => {
@@ -298,7 +295,6 @@ const NiceModal = {
   Provider,
   ModalDef,
   ModalHolder,
-  NiceModalContext,
   create,
   register,
   getModal,

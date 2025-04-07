@@ -8,7 +8,7 @@ const Cases = {
 }
 
 function App() {
-  const [curCase, setCurCase] = useState('case3')
+  const [curCase, setCurCase] = useState('case2')
   const Case = useMemo(() => Cases[curCase as keyof typeof Cases], [curCase])
   // const modal = useModal(TestModal)
 

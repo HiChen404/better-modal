@@ -1,31 +1,80 @@
-import { createStore, create } from 'zustand'
-import { createContext, Dispatch, FC, ReactNode, useContext, useReducer } from 'react'
-import { NiceModalStore, NiceModalAction } from './types'
-import { MODAL_REGISTRY } from '.'
-import { ALREADY_MOUNTED } from '.'
-import { getRandomId } from './utils'
+import { createContext, Dispatch, FC, PropsWithChildren, useContext, useRef } from 'react'
+import { createStore, useStore } from 'zustand'
+import { devtools } from 'zustand/middleware'
+import { ALREADY_MOUNTED, MODAL_REGISTRY } from '.'
 import { reducer } from './reducer'
+import { NiceModalAction, NiceModalStore } from './types'
+import { getRandomId } from './utils'
 
-export let all_dispatch: Record<string, Dispatch<NiceModalAction>> = {}
-
-export const initialState: NiceModalStore = {}
 export const DEFAULT_DISPATCH = () => {
   throw new Error('No dispatch method detected, did you embed your app with NiceModal.Provider?')
 }
 
-export const NiceModalContext = createContext<NiceModalStore>(initialState)
-export const DispatchContext = createContext<Dispatch<NiceModalAction>>(DEFAULT_DISPATCH)
-export const ProviderIdContext = createContext<string | null>(null)
+// biome-ignore lint/style/useConst: <explanation>
+export let all_dispatch: Record<string, Dispatch<NiceModalAction>> = {}
+
+export const initialState: NiceModalStore = {}
+
 export const NiceModalIdContext = createContext<string | null>(null)
 
-export const ZNiceModal = createStore<NiceModalStore>((set) => ({
-  ...initialState,
-}))
+interface BearProps {
+  isTopLevel: boolean
+  providerId: string
+  modals: NiceModalStore
+  modalId?: string
+}
 
-// The placeholder component is used to auto render modals when call modal.show()
-// When modal.show() is called, it means there've been modal info
+interface BearState extends BearProps {
+  dispatch: Dispatch<NiceModalAction>
+}
+
+const createBearStore = (initProps?: Partial<BearState>) => {
+  const DEFAULT_PROPS: BearProps = {
+    isTopLevel: false,
+    providerId: getRandomId(),
+    modals: initialState,
+  }
+  return createStore<BearState>()(
+    devtools(
+      (set) => ({
+        ...DEFAULT_PROPS,
+        ...initProps,
+        dispatch: (args) => {
+          set((state) => ({ modals: reducer(state['modals'], args) }))
+        },
+      }),
+      { enabled: true, name: 'BearStore' }
+    )
+  )
+}
+
+type BearStore = ReturnType<typeof createBearStore>
+
+type BearProviderProps = React.PropsWithChildren<Partial<BearState>>
+
+export const BearContext = createContext<BearStore | null>(null)
+
+function BearProvider({ children, ...props }: BearProviderProps) {
+  const storeRef = useRef<BearStore>()
+  if (!storeRef.current) {
+    storeRef.current = createBearStore(props)
+  }
+  return <BearContext.Provider value={storeRef.current}>{children}</BearContext.Provider>
+}
+
+export function useBearContext<T>(selector: (state: BearState) => T): T {
+  const store = useContext(BearContext)
+  if (!store) throw new Error('Missing BearContext.Provider in the tree')
+  return useStore(store, selector)
+}
+export function useSafeBearContext<T>(selector: (state: BearState) => T): T | undefined {
+  const store = useContext(BearContext)
+  if (!store) return undefined
+  return useStore(store, selector)
+}
+
 const NiceModalPlaceholder: FC = () => {
-  const modals = useContext(NiceModalContext)
+  const modals = useBearContext((s) => s.modals)
   const visibleModalIds = Object.keys(modals).filter((id) => !!modals[id])
   // biome-ignore lint/complexity/noForEach: <explanation>
   visibleModalIds.forEach((id) => {
@@ -51,48 +100,39 @@ const NiceModalPlaceholder: FC = () => {
   )
 }
 
-const InnerContextProvider: FC<{ children: ReactNode; providerId: string }> = ({ children, providerId }) => {
-  const [modals, dispatch] = useReducer(reducer, initialState)
-  const parentDispatch = useContext(DispatchContext)
+const useInitDispatch = () => {
+  const parentDispatch = useSafeBearContext((s) => s.dispatch)
+  const isTopLevel = !parentDispatch
 
-  if (parentDispatch === DEFAULT_DISPATCH) {
-    all_dispatch = { default: dispatch }
+  if (isTopLevel) {
+    all_dispatch = { default: DEFAULT_DISPATCH }
   }
-
-  if (all_dispatch['default']) {
-    all_dispatch[providerId] = dispatch
-  }
-
-  return (
-    <ProviderIdContext.Provider value={providerId}>
-      <NiceModalContext.Provider value={modals}>
-        <DispatchContext.Provider value={dispatch}>
-          {children}
-          <NiceModalPlaceholder />
-        </DispatchContext.Provider>
-      </NiceModalContext.Provider>
-    </ProviderIdContext.Provider>
-  )
+  return { isTopLevel }
 }
 
-export const Provider: FC<{
-  children: ReactNode
-  modals?: NiceModalStore
-  dispatch?: Dispatch<NiceModalAction>
-  providerId?: string
-}> = ({ children, dispatch: givenDispatch, modals: givenModals, providerId = getRandomId() }) => {
-  if (!givenDispatch || !givenModals) {
-    return <InnerContextProvider providerId={providerId}>{children}</InnerContextProvider>
+const DistributeDispatch = ({ isTopLevel, providerId }: { isTopLevel: boolean; providerId: string }) => {
+  const dispatch = useBearContext((s) => s.dispatch)
+
+  if (isTopLevel) {
+    all_dispatch['default'] = dispatch
   }
 
+  all_dispatch[providerId] = dispatch
+
+  return null
+}
+
+export const Provider: FC<PropsWithChildren<Partial<Omit<BearState, 'isTopLevel'>>>> = ({
+  children,
+  providerId = getRandomId(),
+  ...props
+}) => {
+  const isTopLevel = useInitDispatch().isTopLevel
   return (
-    <ProviderIdContext.Provider value={providerId}>
-      <NiceModalContext.Provider value={givenModals}>
-        <DispatchContext.Provider value={givenDispatch}>
-          {children}
-          <NiceModalPlaceholder />
-        </DispatchContext.Provider>
-      </NiceModalContext.Provider>
-    </ProviderIdContext.Provider>
+    <BearProvider isTopLevel={isTopLevel} providerId={providerId} {...props}>
+      {children}
+      <DistributeDispatch isTopLevel={isTopLevel} providerId={providerId} />
+      <NiceModalPlaceholder />
+    </BearProvider>
   )
 }

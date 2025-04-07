@@ -3,7 +3,6 @@ import { initialState } from './context'
 import { NiceModalAction, NiceModalStore } from './types'
 
 
-// Modal reducer used in useReducer hook.
 export const reducer = (
   state: NiceModalStore = initialState,
   action: NiceModalAction,

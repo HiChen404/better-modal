@@ -1,6 +1,6 @@
-import { Modal, Button } from 'antd'
-import NiceModal, { DispatchContext, useModal } from 'better-modal'
-import { createContext, useContext, useRef } from 'react'
+import { Button, Modal } from 'antd'
+import NiceModal, { useModal } from 'better-modal'
+import { createContext, useContext } from 'react'
 
 export const MyAntdModal = NiceModal.create(({ name }: { name: string }) => {
   const modal = useModal()
@@ -24,7 +24,7 @@ export const MyAntdModal = NiceModal.create(({ name }: { name: string }) => {
 export default function Case3() {
   return (
     <>
-      <NiceModal.Provider>
+      <NiceModal.Provider providerId="parent">
         <Button type="primary" onClick={() => NiceModal.show('my-antd-modal', { name: 'hello' })}>
           Show Modal
         </Button>
