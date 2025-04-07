@@ -1,20 +1,17 @@
-import {
-  ComponentProps,
-  ComponentType,
-  Dispatch,
-  FC,
-  JSXElementConstructor,
-  ReactNode,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useReducer,
-} from 'react'
+import { ComponentType, Dispatch, FC, ReactNode, useCallback, useContext, useEffect, useMemo, useReducer } from 'react'
 import { antdDrawer, antdModal, bootstrapDialog, muiDialog } from './adapters'
 import { DispatchContext, NiceModalContext, NiceModalIdContext, ProviderIdContext } from './context'
 import { DEFAULT_DISPATCH, hideModal, initialState, reducer, removeModal, setModalFlags, showModal } from './reducer'
-import { NiceModalAction, NiceModalCallbacks, NiceModalHandler, NiceModalHocProps, NiceModalStore } from './types'
+import {
+  ModalRegistry,
+  NiceModalAction,
+  NiceModalArgs,
+  NiceModalCallbacks,
+  NiceModalHandler,
+  NiceModalHocProps,
+  NiceModalStore,
+} from './types'
+import { createPromise, getModalId, getUid } from './utils'
 
 const symModalId = Symbol('NiceModalId')
 
@@ -24,113 +21,75 @@ declare module 'react' {
   }
 }
 
-const MODAL_REGISTRY: {
-  [id: string]: {
-    comp: FC<any>
-    props?: Record<string, unknown>
-  }
-} = {}
+const MODAL_REGISTRY: ModalRegistry = {}
+
 export const ALREADY_MOUNTED: Record<string, boolean> = {}
-export const getUid = () => `_nice_modal_${uidSeed++}`
-let uidSeed = 0
-/**
- * @deprecated We will deprecate this API because it encounters reference errors in nested provider scenarios.
- * @see useModal()
- */
-let deprecated_dispatch: Record<string, Dispatch<NiceModalAction>> = {}
+
+let all_dispatch: Record<string, Dispatch<NiceModalAction>> = {}
 
 // Get modal component by modal id
-function getModal(modalId: string): FC<any> | undefined {
+function getModal(modalId: string) {
   return MODAL_REGISTRY[modalId]?.comp
 }
 
 const modalCallbacks: NiceModalCallbacks = {}
 const hideModalCallbacks: NiceModalCallbacks = {}
-const getModalId = (modal: string | FC<any>): string => {
-  if (typeof modal === 'string') return modal as string
-  if (!modal[symModalId]) {
-    modal[symModalId] = getUid()
-  }
-  return modal[symModalId]
-}
-
-type NiceModalArgs<T> = T extends keyof JSX.IntrinsicElements | JSXElementConstructor<any>
-  ? ComponentProps<T>
-  : Record<string, unknown>
 
 export function show<T, C, P extends Partial<NiceModalArgs<FC<C>>>>(
   modal: FC<C>,
   args?: P,
-  // dispatch?: Dispatch<NiceModalAction>
   providerId?: string
 ): Promise<T>
 
 export function show<T>(modal: string, args?: Record<string, unknown>, providerId?: string): Promise<T>
 export function show<T, P>(modal: string, args: P, providerId?: string): Promise<T>
 
-export function show(
-  modal: FC<any> | string,
-  args?: NiceModalArgs<FC<any>> | Record<string, unknown>,
-  providerId?: string
-) {
+export function show(modal: FC | string, args?: NiceModalArgs<FC> | Record<string, unknown>, providerId?: string) {
   const modalId = getModalId(modal)
   if (typeof modal !== 'string' && !MODAL_REGISTRY[modalId]) {
     register(modalId, modal as FC)
   }
-  const dispatch = providerId ? deprecated_dispatch[providerId] : deprecated_dispatch['default']
+  const dispatch = providerId ? all_dispatch[providerId] : all_dispatch['default']
   dispatch(showModal(modalId, args))
   if (!modalCallbacks[modalId]) {
-    // `!` tell ts that theResolve will be written before it is used
-    let theResolve!: (args?: unknown) => void
-    // `!` tell ts that theResolve will be written before it is used
-    let theReject!: (args?: unknown) => void
-    const promise = new Promise((resolve, reject) => {
-      theResolve = resolve
-      theReject = reject
-    })
+    const { promise, resolve, reject } = createPromise()
     modalCallbacks[modalId] = {
-      resolve: theResolve,
-      reject: theReject,
+      resolve: resolve,
+      reject: reject,
       promise,
     }
   }
   return modalCallbacks[modalId].promise
 }
 
-export function hide<T>(modal: string | FC<any>, dispatch?: Dispatch<NiceModalAction>): Promise<T>
-export function hide(modal: string | FC<any>, providerId?: string) {
+export function hide<T>(modal: string | FC, providerId?: string): Promise<T>
+export function hide(modal: string | FC, providerId?: string) {
   const modalId = getModalId(modal)
-  const dispatch = providerId ? deprecated_dispatch[providerId] : deprecated_dispatch['default']
+  const dispatch = providerId ? all_dispatch[providerId] : all_dispatch['default']
   dispatch(hideModal(modalId))
-  // Should also delete the callback for modal.resolve #35
   delete modalCallbacks[modalId]
   if (!hideModalCallbacks[modalId]) {
-    // `!` tell ts that theResolve will be written before it is used
-    let theResolve!: (args?: unknown) => void
-    // `!` tell ts that theResolve will be written before it is used
-    let theReject!: (args?: unknown) => void
-    const promise = new Promise((resolve, reject) => {
-      theResolve = resolve
-      theReject = reject
-    })
+    const { promise, resolve, reject } = createPromise()
     hideModalCallbacks[modalId] = {
-      resolve: theResolve,
-      reject: theReject,
+      resolve: resolve,
+      reject: reject,
       promise,
     }
   }
   return hideModalCallbacks[modalId].promise
 }
 
-export const remove = (modal: string | FC<any>, providerId?: string): void => {
+export const remove = (modal: string | FC, providerId?: string): void => {
   const modalId = getModalId(modal)
-  ;(providerId ? deprecated_dispatch[providerId] : deprecated_dispatch['default'])(removeModal(modalId))
+  const dispatch = providerId ? all_dispatch[providerId] : all_dispatch['default']
+  dispatch(removeModal(modalId))
   delete modalCallbacks[modalId]
   delete hideModalCallbacks[modalId]
 }
 
-const setFlags = (modalId: string, flags: Record<string, unknown>): void => {
-  deprecated_dispatch(setModalFlags(modalId, flags))
+const setFlags = (modalId: string, flags: Record<string, unknown>, providerId?: string): void => {
+  const dispatch = providerId ? all_dispatch[providerId] : all_dispatch['default']
+  dispatch(setModalFlags(modalId, flags))
 }
 export function useModal(): NiceModalHandler
 export function useModal(modal: string, args?: Record<string, unknown>): NiceModalHandler
@@ -143,7 +102,6 @@ export function useModal<C, P extends Partial<NiceModalArgs<FC<C>>>>(
 
 export function useModal(modal?: any, args?: any): any {
   const modals = useContext(NiceModalContext)
-  const dispatch = useContext(DispatchContext)
   const contextModalId = useContext(NiceModalIdContext)
   const providerId = useContext(ProviderIdContext)
   let modalId: string | null = null
@@ -153,6 +111,8 @@ export function useModal(modal?: any, args?: any): any {
   } else {
     modalId = getModalId(modal)
   }
+
+  if (!providerId) throw new Error('No Provider id found in NiceModal.useModal')
 
   // Only if contextModalId doesn't exist
   if (!modalId) throw new Error('No modal id found in NiceModal.useModal.')
@@ -167,9 +127,9 @@ export function useModal(modal?: any, args?: any): any {
 
   const modalInfo = modals[mid]
 
-  const showCallback = useCallback((args?: Record<string, unknown>) => show(mid, args, providerId), [mid])
-  const hideCallback = useCallback(() => hide(mid, providerId), [mid])
-  const removeCallback = useCallback(() => remove(mid, providerId), [mid])
+  const showCallback = useCallback((args?: Record<string, unknown>) => show(mid, args, providerId), [mid, providerId])
+  const hideCallback = useCallback(() => hide(mid, providerId), [mid, providerId])
+  const removeCallback = useCallback(() => remove(mid, providerId), [mid, providerId])
   const resolveCallback = useCallback(
     (args?: unknown) => {
       modalCallbacks[mid]?.resolve(args)
@@ -315,11 +275,11 @@ const InnerContextProvider: FC<{ children: ReactNode; providerId: string }> = ({
   const parentDispatch = useContext(DispatchContext)
 
   if (parentDispatch === DEFAULT_DISPATCH) {
-    deprecated_dispatch = { default: dispatch }
+    all_dispatch = { default: dispatch }
   }
 
-  if (deprecated_dispatch['default']) {
-    deprecated_dispatch[providerId] = dispatch
+  if (all_dispatch['default']) {
+    all_dispatch[providerId] = dispatch
   }
 
   return (
@@ -344,14 +304,9 @@ export const Provider: FC<{
   dispatch?: Dispatch<NiceModalAction>
   providerId?: string
 }> = ({ children, dispatch: givenDispatch, modals: givenModals, providerId = getRandomId() }) => {
-  const parentDispatch = useContext(DispatchContext)
   if (!givenDispatch || !givenModals) {
     return <InnerContextProvider providerId={providerId}>{children}</InnerContextProvider>
   }
-
-  // if (parentDispatch === DEFAULT_DISPATCH) {
-  //   deprecated_dispatch = givenDispatch
-  // }
 
   return (
     <ProviderIdContext.Provider value={providerId}>
@@ -373,7 +328,7 @@ export const Provider: FC<{
  */
 export const ModalDef: FC<{
   id: string
-  component: FC<any>
+  component: FC
 }> = ({ id, component }) => {
   useEffect(() => {
     register(id, component)
@@ -396,7 +351,7 @@ export const ModalDef: FC<{
  * @returns
  */
 export const ModalHolder: FC<{
-  modal: string | FC<any>
+  modal: string | FC
   handler: any
   [key: string]: unknown
 }> = ({ modal, handler = {}, ...restProps }) => {
@@ -409,7 +364,7 @@ export const ModalHolder: FC<{
   if (!ModalComp) {
     throw new Error(`No modal found for id: ${modal} in NiceModal.ModalHolder.`)
   }
-  handler.show = useCallback((args: any) => show(mid, args), [mid])
+  handler.show = useCallback((args: unknown) => show(mid, args), [mid])
   handler.hide = useCallback(() => hide(mid), [mid])
 
   return <ModalComp id={mid} {...restProps} />

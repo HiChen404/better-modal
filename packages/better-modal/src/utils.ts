@@ -17,3 +17,19 @@ export const getModalId = (modal: string | React.FC<any>): string => {
   }
   return modal[symModalId]
 }
+
+export const createPromise = <T = unknown>() => {
+  let _resolve!: (value: T | PromiseLike<T>) => void
+  let _reject!: (reason?: any) => void
+
+  const promise = new Promise<T>((resolve, reject) => {
+    _resolve = resolve
+    _reject = reject
+  })
+
+  return {
+    promise,
+    resolve: _resolve,
+    reject: _reject,
+  }
+}

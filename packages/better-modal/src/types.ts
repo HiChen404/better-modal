@@ -1,3 +1,11 @@
+import { ComponentProps, FC, JSXElementConstructor } from 'react'
+
+type ModalID = string
+
+export type NiceModalArgs<T> = T extends keyof JSX.IntrinsicElements | JSXElementConstructor<any>
+  ? ComponentProps<T>
+  : Record<string, unknown>
+
 export interface NiceModalState {
   id: string
   args?: Record<string, unknown>
@@ -7,7 +15,7 @@ export interface NiceModalState {
 }
 
 export interface NiceModalStore {
-  [key: string]: NiceModalState
+  [key: ModalID]: NiceModalState
 }
 
 export interface NiceModalAction {
@@ -23,6 +31,13 @@ export interface NiceModalCallbacks {
     resolve: (args: unknown) => void
     reject: (args: unknown) => void
     promise: Promise<unknown>
+  }
+}
+
+export interface ModalRegistry {
+  [id: ModalID]: {
+    comp: FC<NiceModalHocProps>
+    props?: Record<string, unknown>
   }
 }
 
