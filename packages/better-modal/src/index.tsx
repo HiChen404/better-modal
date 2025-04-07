@@ -1,122 +1,37 @@
-/* *********************************************************
- * Copyright 2021 eBay Inc.
-
- * Use of this source code is governed by an MIT-style
- * license that can be found in the LICENSE file or at
- * https://opensource.org/licenses/MIT.
-*********************************************************** */
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/**
- * @module NiceModal
- * */
-
-import React, {
-  useEffect,
-  useCallback,
-  useContext,
-  useReducer,
-  useMemo,
-  createContext,
-  FC,
-  Dispatch,
-  ReactNode,
+import {
   ComponentProps,
   ComponentType,
+  Dispatch,
+  FC,
   JSXElementConstructor,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useReducer,
 } from 'react'
+import { antdDrawer, antdModal, bootstrapDialog, muiDialog } from './adapters'
+import { DispatchContext, NiceModalContext, NiceModalIdContext, ProviderIdContext } from './context'
+import { DEFAULT_DISPATCH, hideModal, initialState, reducer, removeModal, setModalFlags, showModal } from './reducer'
+import { NiceModalAction, NiceModalCallbacks, NiceModalHandler, NiceModalHocProps, NiceModalStore } from './types'
 
-export interface NiceModalState {
-  id: string
-  args?: Record<string, unknown>
-  visible?: boolean
-  delayVisible?: boolean
-  keepMounted?: boolean
-}
-
-export interface NiceModalStore {
-  [key: string]: NiceModalState
-}
-
-export interface NiceModalAction {
-  type: string
-  payload: {
-    modalId: string
-    args?: Record<string, unknown>
-    flags?: Record<string, unknown>
-  }
-}
-interface NiceModalCallbacks {
-  [modalId: string]: {
-    resolve: (args: unknown) => void
-    reject: (args: unknown) => void
-    promise: Promise<unknown>
-  }
-}
-
-/**
- * The handler to manage a modal returned by {@link useModal | useModal} hook.
- */
-export interface NiceModalHandler<Props = Record<string, unknown>> extends NiceModalState {
-  /**
-   * Whether a modal is visible, it's controlled by {@link NiceModalHandler.show | show}/{@link NiceModalHandler.hide | hide} method.
-   */
-  visible: boolean
-  /**
-   * If you don't want to remove the modal from the tree after hide when using helpers, set it to true.
-   */
-  keepMounted: boolean
-  /**
-   * Show the modal, it will change {@link NiceModalHandler.visible | visible} state to true.
-   * @param args - an object passed to modal component as props.
-   */
-  show: (args?: Props) => Promise<unknown>
-  /**
-   * Hide the modal, it will change {@link NiceModalHandler.visible | visible} state to false.
-   */
-  hide: () => Promise<unknown>
-  /**
-   * Resolve the promise returned by {@link NiceModalHandler.show | show} method.
-   */
-  resolve: (args?: unknown) => void
-  /**
-   * Reject the promise returned by {@link NiceModalHandler.show | show} method.
-   */
-  reject: (args?: unknown) => void
-  /**
-   * Remove the modal component from React component tree. It improves performance compared to just making a modal invisible.
-   */
-  remove: () => void
-
-  /**
-   * Resolve the promise returned by {@link NiceModalHandler.hide | hide} method.
-   */
-  resolveHide: (args?: unknown) => void
-}
-
-// Omit will not work if extends Record<string, unknown>, which is not needed here
-export interface NiceModalHocProps {
-  id: string
-  defaultVisible?: boolean
-  keepMounted?: boolean
-}
 const symModalId = Symbol('NiceModalId')
-const initialState: NiceModalStore = {}
-const DEFAULT_DISPATCH = () => {
-  throw new Error('No dispatch method detected, did you embed your app with NiceModal.Provider?')
+
+declare module 'react' {
+  interface FunctionComponent {
+    [symModalId]?: string
+  }
 }
-export const NiceModalContext = createContext<NiceModalStore>(initialState)
-export const DispatchContext = createContext<Dispatch<NiceModalAction>>(DEFAULT_DISPATCH)
-export const ProviderIdContext = createContext<string | null>(null)
-const NiceModalIdContext = createContext<string | null>(null)
+
 const MODAL_REGISTRY: {
   [id: string]: {
     comp: FC<any>
     props?: Record<string, unknown>
   }
 } = {}
-const ALREADY_MOUNTED: Record<string, boolean> = {}
-const getUid = () => `_nice_modal_${uidSeed++}`
+export const ALREADY_MOUNTED: Record<string, boolean> = {}
+export const getUid = () => `_nice_modal_${uidSeed++}`
 let uidSeed = 0
 /**
  * @deprecated We will deprecate this API because it encounters reference errors in nested provider scenarios.
@@ -124,101 +39,9 @@ let uidSeed = 0
  */
 let deprecated_dispatch: Record<string, Dispatch<NiceModalAction>> = {}
 
-// Modal reducer used in useReducer hook.
-export const reducer = (state: NiceModalStore = initialState, action: NiceModalAction): NiceModalStore => {
-  switch (action.type) {
-    case 'nice-modal/show': {
-      const { modalId, args } = action.payload
-      return {
-        ...state,
-        [modalId]: {
-          ...state[modalId],
-          id: modalId,
-          args,
-          // If modal is not mounted, mount it first then make it visible.
-          // There is logic inside HOC wrapper to make it visible after its first mount.
-          // This mechanism ensures the entering transition.
-          visible: !!ALREADY_MOUNTED[modalId],
-          delayVisible: !ALREADY_MOUNTED[modalId],
-        },
-      }
-    }
-    case 'nice-modal/hide': {
-      const { modalId } = action.payload
-      if (!state[modalId]) return state
-      return {
-        ...state,
-        [modalId]: {
-          ...state[modalId],
-          visible: false,
-        },
-      }
-    }
-    case 'nice-modal/remove': {
-      const { modalId } = action.payload
-      const newState = { ...state }
-      delete newState[modalId]
-      return newState
-    }
-    case 'nice-modal/set-flags': {
-      const { modalId, flags } = action.payload
-      return {
-        ...state,
-        [modalId]: {
-          ...state[modalId],
-          ...flags,
-        },
-      }
-    }
-    default:
-      return state
-  }
-}
-
 // Get modal component by modal id
 function getModal(modalId: string): FC<any> | undefined {
   return MODAL_REGISTRY[modalId]?.comp
-}
-
-// action creator to show a modal
-function showModal(modalId: string, args?: Record<string, unknown>): NiceModalAction {
-  return {
-    type: 'nice-modal/show',
-    payload: {
-      modalId,
-      args,
-    },
-  }
-}
-
-// action creator to set flags of a modal
-function setModalFlags(modalId: string, flags: Record<string, unknown>): NiceModalAction {
-  return {
-    type: 'nice-modal/set-flags',
-    payload: {
-      modalId,
-      flags,
-    },
-  }
-}
-// action creator to hide a modal
-function hideModal(modalId: string): NiceModalAction {
-  return {
-    type: 'nice-modal/hide',
-    payload: {
-      modalId,
-    },
-  }
-}
-
-// action creator to remove a modal
-function removeModal(modalId: string): NiceModalAction {
-  return {
-    type: 'nice-modal/remove',
-    payload: {
-      modalId,
-    },
-  }
 }
 
 const modalCallbacks: NiceModalCallbacks = {}
@@ -245,11 +68,9 @@ export function show<T, C, P extends Partial<NiceModalArgs<FC<C>>>>(
 export function show<T>(modal: string, args?: Record<string, unknown>, providerId?: string): Promise<T>
 export function show<T, P>(modal: string, args: P, providerId?: string): Promise<T>
 
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function show(
   modal: FC<any> | string,
   args?: NiceModalArgs<FC<any>> | Record<string, unknown>,
-  // dispatch?: Dispatch<NiceModalAction>,
   providerId?: string
 ) {
   const modalId = getModalId(modal)
@@ -257,7 +78,6 @@ export function show(
     register(modalId, modal as FC)
   }
   const dispatch = providerId ? deprecated_dispatch[providerId] : deprecated_dispatch['default']
-  console.log('🚀 -> dispatch:', dispatch)
   dispatch(showModal(modalId, args))
   if (!modalCallbacks[modalId]) {
     // `!` tell ts that theResolve will be written before it is used
@@ -278,7 +98,6 @@ export function show(
 }
 
 export function hide<T>(modal: string | FC<any>, dispatch?: Dispatch<NiceModalAction>): Promise<T>
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function hide(modal: string | FC<any>, providerId?: string) {
   const modalId = getModalId(modal)
   const dispatch = providerId ? deprecated_dispatch[providerId] : deprecated_dispatch['default']
@@ -322,7 +141,6 @@ export function useModal<C, P extends Partial<NiceModalArgs<FC<C>>>>(
   show: (args?: P) => Promise<unknown>
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function useModal(modal?: any, args?: any): any {
   const modals = useContext(NiceModalContext)
   const dispatch = useContext(DispatchContext)
@@ -440,7 +258,7 @@ export const create = <P extends {}>(Comp: ComponentType<P>): FC<P & NiceModalHo
     if (!shouldMount) return null
     return (
       <NiceModalIdContext.Provider value={id}>
-        <Comp {...(props as P)} {...args} />
+        <Comp {...(props as unknown as P)} {...args} />
       </NiceModalIdContext.Provider>
     )
   }
@@ -468,6 +286,7 @@ export const unregister = (id: string): void => {
 const NiceModalPlaceholder: FC = () => {
   const modals = useContext(NiceModalContext)
   const visibleModalIds = Object.keys(modals).filter((id) => !!modals[id])
+  // biome-ignore lint/complexity/noForEach: <explanation>
   visibleModalIds.forEach((id) => {
     if (!MODAL_REGISTRY[id] && !ALREADY_MOUNTED[id]) {
       console.warn(`No modal found for id: ${id}. Please check the id or if it is registered or declared via JSX.`)
@@ -594,93 +413,6 @@ export const ModalHolder: FC<{
   handler.hide = useCallback(() => hide(mid), [mid])
 
   return <ModalComp id={mid} {...restProps} />
-}
-
-export const antdModal = (
-  modal: NiceModalHandler
-): { visible: boolean; onCancel: () => void; onOk: () => void; afterClose: () => void } => {
-  return {
-    visible: modal.visible,
-    onOk: () => modal.hide(),
-    onCancel: () => modal.hide(),
-    afterClose: () => {
-      // Need to resolve before remove
-      modal.resolveHide()
-      if (!modal.keepMounted) modal.remove()
-    },
-  }
-}
-export const antdModalV5 = (
-  modal: NiceModalHandler
-): { open: boolean; onCancel: () => void; onOk: () => void; afterClose: () => void } => {
-  const { onOk, onCancel, afterClose } = antdModal(modal)
-  return {
-    open: modal.visible,
-    onOk,
-    onCancel,
-    afterClose,
-  }
-}
-export const antdDrawer = (
-  modal: NiceModalHandler
-): { visible: boolean; onClose: () => void; afterVisibleChange: (visible: boolean) => void } => {
-  return {
-    visible: modal.visible,
-    onClose: () => modal.hide(),
-    afterVisibleChange: (v: boolean) => {
-      if (!v) {
-        modal.resolveHide()
-      }
-      !v && !modal.keepMounted && modal.remove()
-    },
-  }
-}
-export const antdDrawerV5 = (
-  modal: NiceModalHandler
-): { open: boolean; onClose: () => void; afterOpenChange: (visible: boolean) => void } => {
-  const { onClose, afterVisibleChange: afterOpenChange } = antdDrawer(modal)
-  return {
-    open: modal.visible,
-    onClose,
-    afterOpenChange,
-  }
-}
-export const muiDialog = (modal: NiceModalHandler): { open: boolean; onClose: () => void; onExited: () => void } => {
-  return {
-    open: modal.visible,
-    onClose: () => modal.hide(),
-    onExited: () => {
-      modal.resolveHide()
-      !modal.keepMounted && modal.remove()
-    },
-  }
-}
-
-export const muiDialogV5 = (
-  modal: NiceModalHandler
-): { open: boolean; onClose: () => void; TransitionProps: { onExited: () => void } } => {
-  return {
-    open: modal.visible,
-    onClose: () => modal.hide(),
-    TransitionProps: {
-      onExited: () => {
-        modal.resolveHide()
-        !modal.keepMounted && modal.remove()
-      },
-    },
-  }
-}
-export const bootstrapDialog = (
-  modal: NiceModalHandler
-): { show: boolean; onHide: () => void; onExited: () => void } => {
-  return {
-    show: modal.visible,
-    onHide: () => modal.hide(),
-    onExited: () => {
-      modal.resolveHide()
-      !modal.keepMounted && modal.remove()
-    },
-  }
 }
 
 const NiceModal = {

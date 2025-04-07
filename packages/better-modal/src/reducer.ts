@@ -1,28 +1,16 @@
-/* *********************************************************
- * Copyright 2021 eBay Inc.
-
- * Use of this source code is governed by an MIT-style
- * license that can be found in the LICENSE file or at
- * https://opensource.org/licenses/MIT.
-*********************************************************** */
-
-import { FC } from 'react'
+import { ALREADY_MOUNTED } from '.'
 import { NiceModalAction, NiceModalStore } from './types'
 
-// Tracking already mounted modals
-export const ALREADY_MOUNTED: Record<string, boolean> = {}
-
-export const MODAL_REGISTRY: {
-  [id: string]: {
-    comp: FC<any>
-    props?: Record<string, unknown>
-  }
-} = {}
-
-const initialState: NiceModalStore = {}
+export const DEFAULT_DISPATCH = () => {
+  throw new Error('No dispatch method detected, did you embed your app with NiceModal.Provider?')
+}
+export const initialState: NiceModalStore = {}
 
 // Modal reducer used in useReducer hook.
-export const reducer = (state: NiceModalStore = initialState, action: NiceModalAction): NiceModalStore => {
+export const reducer = (
+  state: NiceModalStore = initialState,
+  action: NiceModalAction,
+): NiceModalStore => {
   switch (action.type) {
     case 'nice-modal/show': {
       const { modalId, args } = action.payload
@@ -69,5 +57,46 @@ export const reducer = (state: NiceModalStore = initialState, action: NiceModalA
     }
     default:
       return state
+  }
+}
+
+// action creator to show a modal
+export function showModal(modalId: string, args?: Record<string, unknown>): NiceModalAction {
+  return {
+    type: 'nice-modal/show',
+    payload: {
+      modalId,
+      args,
+    },
+  }
+}
+
+// action creator to set flags of a modal
+export function setModalFlags(modalId: string, flags: Record<string, unknown>): NiceModalAction {
+  return {
+    type: 'nice-modal/set-flags',
+    payload: {
+      modalId,
+      flags,
+    },
+  }
+}
+// action creator to hide a modal
+export function hideModal(modalId: string): NiceModalAction {
+  return {
+    type: 'nice-modal/hide',
+    payload: {
+      modalId,
+    },
+  }
+}
+
+// action creator to remove a modal
+export function removeModal(modalId: string): NiceModalAction {
+  return {
+    type: 'nice-modal/remove',
+    payload: {
+      modalId,
+    },
   }
 }

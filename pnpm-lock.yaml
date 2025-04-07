@@ -36,7 +36,7 @@ importers:
         version: 19.1.1(@types/react@19.1.0)
       '@vitejs/plugin-react':
         specifier: ^4.3.4
-        version: 4.3.4(vite@6.2.4(@types/node@16.11.68))
+        version: 4.3.4(vite@6.2.4)
       globals:
         specifier: ^15.15.0
         version: 15.15.0
@@ -49,9 +49,6 @@ importers:
 
   apps/web-nice-modal:
     dependencies:
-      '@ebay/nice-modal-react':
-        specifier: 1.2.13
-        version: 1.2.13(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       react:
         specifier: ^19.0.0
         version: 19.1.0
@@ -67,7 +64,7 @@ importers:
         version: 19.1.1(@types/react@19.1.0)
       '@vitejs/plugin-react':
         specifier: ^4.3.4
-        version: 4.3.4(vite@6.2.4(@types/node@16.11.68))
+        version: 4.3.4(vite@6.2.4)
       globals:
         specifier: ^15.15.0
         version: 15.15.0
@@ -82,7 +79,7 @@ importers:
     dependencies:
       '@vitejs/plugin-react':
         specifier: ^4.3.4
-        version: 4.3.4(vite@6.2.4(@types/node@16.11.68))
+        version: 4.3.4(vite@6.2.4)
     devDependencies:
       '@testing-library/react':
         specifier: ^16.3.0
@@ -334,12 +331,6 @@ packages:
   '@csstools/css-tokenizer@3.0.3':
     resolution: {integrity: sha512-UJnjoFsmxfKUdNYdWgOB0mWUypuLvAfQPH1+pyvRJs6euowbFkFC6P13w1l8mJyi3vxYMxc9kld5jZEGRQs6bw==}
     engines: {node: '>=18'}
-
-  '@ebay/nice-modal-react@1.2.13':
-    resolution: {integrity: sha512-jx8xIWe/Up4tpNuM02M+rbnLoxdngTGk3Y8LjJsLGXXcSoKd/+eZStZcAlIO/jwxyz/bhPZnpqPJZWAmhOofuA==}
-    peerDependencies:
-      react: '>16.8.0'
-      react-dom: '>16.8.0'
 
   '@emotion/hash@0.8.0':
     resolution: {integrity: sha512-kBJtf7PH6aWwZ6fka3zQ0p6SBYzx4fl1LoZXE2RrnYST9Xljm7WfKJrU4g/Xr3Beg72MLrp1AWNUmuYJTL7Cow==}
@@ -2131,11 +2122,6 @@ snapshots:
 
   '@csstools/css-tokenizer@3.0.3': {}
 
-  '@ebay/nice-modal-react@1.2.13(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
-    dependencies:
-      react: 19.1.0
-      react-dom: 19.1.0(react@19.1.0)
-
   '@emotion/hash@0.8.0': {}
 
   '@emotion/unitless@0.7.5': {}
@@ -2454,7 +2440,7 @@ snapshots:
 
   '@types/tough-cookie@4.0.5': {}
 
-  '@vitejs/plugin-react@4.3.4(vite@6.2.4(@types/node@16.11.68))':
+  '@vitejs/plugin-react@4.3.4(vite@6.2.4)':
     dependencies:
       '@babel/core': 7.26.10
       '@babel/plugin-transform-react-jsx-self': 7.25.9(@babel/core@7.26.10)

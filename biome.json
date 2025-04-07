@@ -28,6 +28,7 @@
         "useImportType": "off",
         "useDefaultParameterLast": "off"
       },
+      "complexity": { "useLiteralKeys": "off" },
       "a11y": {
         "useKeyWithClickEvents": "off",
         "noSvgWithoutTitle": "off"

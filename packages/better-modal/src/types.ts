@@ -1,14 +1,3 @@
-/* *********************************************************
- * Copyright 2021 eBay Inc.
-
- * Use of this source code is governed by an MIT-style
- * license that can be found in the LICENSE file or at
- * https://opensource.org/licenses/MIT.
-*********************************************************** */
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { ComponentProps, ComponentType, Dispatch, FC, JSXElementConstructor } from 'react';
-
 export interface NiceModalState {
   id: string
   args?: Record<string, unknown>
@@ -29,7 +18,6 @@ export interface NiceModalAction {
     flags?: Record<string, unknown>
   }
 }
-
 export interface NiceModalCallbacks {
   [modalId: string]: {
     resolve: (args: unknown) => void
@@ -83,19 +71,4 @@ export interface NiceModalHocProps {
   id: string
   defaultVisible?: boolean
   keepMounted?: boolean
-}
-
-export type NiceModalArgs<T> = T extends keyof JSX.IntrinsicElements | JSXElementConstructor<any>
-  ? ComponentProps<T>
-  : Record<string, unknown>
-
-export interface ModalRegistry {
-  [id: string]: {
-    comp: FC<any>
-    props?: Record<string, unknown>
-  }
-}
-
-export interface AlreadyMounted {
-  [id: string]: boolean
 }

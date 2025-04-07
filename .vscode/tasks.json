@@ -23,7 +23,7 @@
       "path": "packages/better-modal",
     "problemMatcher": [],
       "label": "better-modal 开发",
-      "detail": "vite"
+      "detail": "开发better-modal npm 包"
     },
   ]
 }
